@@ -1,5 +1,5 @@
 Categories:
-  - Communication
+  - Internet
 License: GPL-3.0-only
 WebSite: https://t.me/momogram_update
 SourceCode: https://github.com/dic1911/Momogram
@@ -12,8 +12,8 @@ Description: |-
 
   Built with unique customization and features, get ready and let Momogram take your Telegram chatting experience to the next level.
 
-RepoType: git
-Repo: https://github.com/nubesurrealista/Momodroid
+AntiFeatures:
+  - NonFreeNet
 
 AutoUpdateMode: None
 UpdateCheckMode: None
@@ -21,7 +21,6 @@ UpdateCheckMode: None
 Builds:
   - versionName: 11.12.0
     versionCode: 32817
-    commit: bf9ed9da501e2ade78669bea00091daf362e54e2
     prebuild: echo "Using prebuilt APKs"
     output:
       - repo/Momo-v11.12.0-32817a2da8-arm64-v8a.apk
