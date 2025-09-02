@@ -4,21 +4,18 @@ on:
   schedule:
     - cron: '0 12 * * *'
   workflow_dispatch:
-  push:
-    paths:
-      - 'repo/**'
 
 jobs:
   sync_apks:
     runs-on: ubuntu-latest
     outputs:
-      has_new_apks: ${{ steps.check_apks.outputs.has_changes }}
+      has_new_apks: ${{ steps.check_tag.outputs.has_changes }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get latest release info
+      - name: Get latest release tag
         id: get_release
         run: |
           releases=$(curl -s "https://api.github.com/repos/dic1911/Momogram/releases?per_page=5")
@@ -26,7 +23,22 @@ jobs:
           tag=$(jq -r .tag_name release.json)
           echo "tag=$tag" >> $GITHUB_ENV
 
+      - name: Check if tag is new
+        id: check_tag
+        run: |
+          mkdir -p .meta
+          if [ ! -f .meta/last_tag.txt ]; then
+            echo "none" > .meta/last_tag.txt
+          fi
+          last=$(cat .meta/last_tag.txt)
+          if [ "$last" != "${{ env.tag }}" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Download APKs
+        if: steps.check_tag.outputs.has_changes == 'true'
         run: |
           mkdir -p repo
           for ARCH in arm64-v8a armeabi-v7a; do
@@ -37,30 +49,13 @@ jobs:
             fi
           done
 
-      - name: Check if APKs have changed
-        id: check_apks
+      - name: Update last_tag.txt
+        if: steps.check_tag.outputs.has_changes == 'true'
         run: |
-          git fetch origin
-          git checkout origin/main
-          mkdir -p old_repo
-          cp -r repo/* old_repo/ || true
-          changes=false
-          for file in repo/*; do
-            base=$(basename "$file")
-            if [ ! -f "$file" ]; then continue; fi
-            if ! cmp -s "$file" "old_repo/$base"; then
-              changes=true
-              break
-            fi
-          done
-          echo "has_changes=$changes" >> $GITHUB_OUTPUT
-
-      - name: Commit and push if new APKs
-        if: steps.check_apks.outputs.has_changes == 'true'
-        run: |
+          echo "${{ env.tag }}" > .meta/last_tag.txt
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          git add repo/
+          git add repo/ .meta/last_tag.txt
           git commit -m "Sync APKs from Momogram release ${{ env.tag }}"
           git push
 
